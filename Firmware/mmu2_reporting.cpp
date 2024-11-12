@@ -11,6 +11,7 @@
 #include "ultralcd.h"
 #include "Filament_sensor.h"
 #include "language.h"
+#include "lcd.h"
 #include "temperature.h"
 #include "sound.h"
 
@@ -157,7 +158,7 @@ static uint8_t ReportErrorHookMonitor(uint8_t ei) {
         //! |                    |
         //! |>(left)             |
         //! ----------------------
-        //! Three choices 
+        //! Three choices
         //! |>(left)>(mid)>(righ)|
         //! ----------------------
         //! Two choices
@@ -236,7 +237,7 @@ bool TuneMenuEntered() {
 
 void ReportErrorHook(CommandInProgress /*cip*/, ErrorCode ec, uint8_t /*es*/) {
     if (putErrorScreenToSleep) return;
-    
+
     if (mmu2.MMUCurrentErrorCode() == ErrorCode::OK && mmu2.MMULastErrorSource() == MMU2::ErrorSourceMMU) {
         // If the error code suddenly changes to OK, that means
         // a button was pushed on the MMU and the LCD should
@@ -346,7 +347,7 @@ void TryLoadUnloadReporter::DumpToSerial(){
 
 /// Disables MMU in EEPROM
 void DisableMMUInSettings() {
-    eeprom_update_byte((uint8_t *)EEPROM_MMU_ENABLED, false);
+    eeprom_update_byte_notify((uint8_t *)EEPROM_MMU_ENABLED, false);
     mmu2.Status();
 }
 
@@ -393,7 +394,7 @@ void FullScreenMsgLoad(uint8_t slot){
 }
 
 void FullScreenMsgRestoringTemperature(){
-    lcd_display_message_fullscreen_P(_i("MMU Retry: Restoring temperature...")); ////MSG_MMU_RESTORE_TEMP c=20 r=4
+    lcd_display_message_fullscreen_P(_T(MSG_MMU_RESTORE_TEMP));
 }
 
 void ScreenUpdateEnable(){
@@ -412,7 +413,7 @@ struct TuneItem {
 
 static const TuneItem TuneItems[] PROGMEM = {
   { (uint8_t)Register::Selector_sg_thrs_R, 1, 4},
-  { (uint8_t)Register::Idler_sg_thrs_R, 4, 7},
+  { (uint8_t)Register::Idler_sg_thrs_R, 2, 10},
 };
 
 static_assert(sizeof(TuneItems)/sizeof(TuneItem) == 2);
@@ -455,7 +456,7 @@ void tuneIdlerStallguardThresholdMenu() {
     );
     MENU_ITEM_BACK_P(_T(MSG_DONE));
     MENU_ITEM_EDIT_int3_P(
-        _i("Sensitivity"), ////MSG_MMU_SENSITIVITY c=18
+        _T(MSG_MMU_SENSITIVITY),
         &_md->currentValue,
         _md->item.minValue,
         _md->item.maxValue
@@ -464,6 +465,15 @@ void tuneIdlerStallguardThresholdMenu() {
 }
 
 void tuneIdlerStallguardThreshold() {
+    if ((CommandInProgress)mmu2.GetCommandInProgress() != NoCommand)
+    {
+        // Workaround to mitigate an issue where the Tune menu doesn't
+        // work if the MMU is running a command. For example the Idler
+        // homing fails during toolchange.
+        // To save the print, make the Tune button unresponsive for now.
+        return;
+    }
+
     putErrorScreenToSleep = true;
     menu_submenu(tuneIdlerStallguardThresholdMenu);
 }

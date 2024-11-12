@@ -12,7 +12,18 @@
 #define EEPROM_H
 
 #include <stdint.h>
+#include <stddef.h>
+#include "Configuration_var.h"
 
+// Custom Mendel Name
+#ifndef CUSTOM_MENDEL_NAME
+    #define CUSTOM_MENDEL_NAME "Prusa i3"
+#endif
+
+#define MAX_CUSTOM_MENDEL_NAME_LENGTH 17
+
+
+// Sheets
 #define MAX_SHEETS 8
 #define MAX_SHEET_NAME_LENGTH 7
 
@@ -73,7 +84,7 @@ static_assert(sizeof(Sheets) == EEPROM_SHEETS_SIZEOF, "Sizeof(Sheets) is not EEP
 
   To convert hex to dec         https://www.rapidtables.com/convert/number/hex-to-decimal.html
 
-  Version: 1.0.2
+  Version: 3.14.1
 
   ---------------------------------------------------------------------------------
 
@@ -96,7 +107,7 @@ static_assert(sizeof(Sheets) == EEPROM_SHEETS_SIZEOF, "Sizeof(Sheets) is not EEP
 | ^           | ^       | ^                                     | f0h 240      | ^               __P__ | needs Z calibration                               | ^            | ^
 | ^           | ^       | ^                                     | fah 250      | ^                     | needs XYZ calibration                             | ^            | ^
 | ^           | ^       | ^                                     | 00h 0        | ^                     | Unknown (legacy)                                  | ^            | ^
-| 0x0FF5 4085 | uint16  | EEPROM_BABYSTEP_Z0                    | ???          | ff ffh 65535          | Babystep for Z ???                                | ???          | D3 Ax0ff5 C2
+| 0x0FF5 4085 | uint16  | _EEPROM_FREE_NR12_                    | ???          | ff ffh 65535          | _Free EEPROM space_                               | _free space_ | D3 Ax0ff5 C2
 | 0x0FF1 4081 | uint32  | EEPROM_FILAMENTUSED                   | ???          | 00 00 00 00h 0 __S/P__| Filament used in meters                           | ???          | D3 Ax0ff1 C4
 | 0x0FED 4077 | uint32  | EEPROM_TOTALTIME                      | ???          | 00 00 00 00h 0 __S/P__| Total print time in minutes                       | ???          | D3 Ax0fed C4
 | 0x0FE5 4069 | float   | EEPROM_BED_CALIBRATION_CENTER         | ???          | ff ff ff ffh          | ???                                               | ???          | D3 Ax0fe5 C8
@@ -371,6 +382,42 @@ static_assert(sizeof(Sheets) == EEPROM_SHEETS_SIZEOF, "Sizeof(Sheets) is not EEP
 | 0x0C95 3221 | PGM_P   | EEPROM_KILL_MESSAGE                   | 0-65535      | ff ffh                | Kill message PGM pointer                          | kill()       | D3 Ax0c95 C2
 | 0x0C94 3220 | uint8   | EEPROM_KILL_PENDING_FLAG              | 42h, ffh     | ffh                   | Kill pending flag (0x42 magic value)              | kill()       | D3 Ax0c94 C1
 | 0x0C91 3217 | char[3] | EEPROM_FILENAME_EXTENSION             | ???          | ffffffffh             | DOS 8.3 filename extension                        | Power Panic  | D3 Ax0c91 C1
+| 0x0C80 3200 | char[17]| EEPROM_CUSTOM_MENDEL_NAME             | Prusa i3 MK3S| ffffffffffffffffff... | Custom Printer Name                               |              | D3 Ax0c80 C17
+| 0x0C7F 3199 | bool    | EEPROM_UVLO_Z_LIFTED                  | 00h 0        | 00h                   | Power Panic Z axis NOT lifted                     | Power Panic  | D3 Ax0c7f C1
+| ^           | ^       | ^                                     | 01h 1        | 01h                   | Power Panic Z axis lifted                         | ^            | ^
+| 0x0C7d 3197 | uint16  | EEPROM_UVLO_EXTRUDE_MINTEMP           | 0-305        | afh 175               | Power Panic Extrude mintemp                       | Power Panic  | D3 Ax0c7d C2
+| 0x0C6D 3181 | uint32  | EEPROM_UVLO_ACCELL_MM_S2_NORMAL       | ???          | ff ff ff ffh          | Power Panic acceleration mm per s2 normal         | Power Panic  | D3 Ax0c6d C16
+| ^           | ^       | ^                                     | ???          | ^                     | E-axis                                            | ^            | D3 Ax0c79 C4
+| ^           | ^       | ^                                     | ???          | ^                     | Z-axis                                            | ^            | D3 Ax0c75 C4
+| ^           | ^       | ^                                     | ???          | ^                     | Y-axis                                            | ^            | D3 Ax0c71 C4
+| ^           | ^       | ^                                     | ???          | ^                     | X-axis                                            | ^            | D3 Ax0c6d C4
+| 0x0C5D 3165 | uint32  | EEPROM_UVLO_ACCELL_MM_S2_SILENT       | ???          | ff ff ff ffh          | Power Panic acceleration mm per s2 silent         | Power Panic  | D3 Ax0c5d C16
+| ^           | ^       | ^                                     | ???          | ^                     | E-axis                                            | ^            | D3 Ax0c69 C4
+| ^           | ^       | ^                                     | ???          | ^                     | Z-axis                                            | ^            | D3 Ax0c65 C4
+| ^           | ^       | ^                                     | ???          | ^                     | Y-axis                                            | ^            | D3 Ax0c61 C4
+| ^           | ^       | ^                                     | ???          | ^                     | X-axis                                            | ^            | D3 Ax0c5d C4
+| 0x0C4D 3149 | float   | EEPROM_UVLO_MAX_FEEDRATE_NORMAL       | ???          | ff ff ff ffh          | Power Panic max feedrate normal                   | Power Panic  | D3 Ax0c4d C16
+| ^           | ^       | ^                                     | ???          | ^                     | E-axis                                            | ^            | D3 Ax0d59 C4
+| ^           | ^       | ^                                     | ???          | ^                     | Z-axis                                            | ^            | D3 Ax0d55 C4
+| ^           | ^       | ^                                     | ???          | ^                     | Y-axis                                            | ^            | D3 Ax0d51 C4
+| ^           | ^       | ^                                     | ???          | ^                     | X-axis                                            | ^            | D3 Ax0c4d C4
+| 0x0C3D 3133 | float   | EEPROM_UVLO_MAX_FEEDRATE_SILENT       | ???          | ff ff ff ffh          | Power Panic max feedrate silent                   | Power Panic  | D3 Ax0c3d C16
+| ^           | ^       | ^                                     | ???          | ^                     | E-axis                                            | ^            | D3 Ax0d49 C4
+| ^           | ^       | ^                                     | ???          | ^                     | Z-axis                                            | ^            | D3 Ax0d45 C4
+| ^           | ^       | ^                                     | ???          | ^                     | Y-axis                                            | ^            | D3 Ax0d41 C4
+| ^           | ^       | ^                                     | ???          | ^                     | X-axis                                            | ^            | D3 Ax0c3d C4
+| 0x0C39 3129 | float   | EEPROM_UVLO_MIN_FEEDRATE              | ???          | ff ff ff ffh          | Power Panic min feedrate                          | Power Panic  | D3 Ax0c39 C4
+| 0x0C35 3125 | float   | EEPROM_UVLO_MIN_TRAVEL_FEEDRATE       | ???          | ff ff ff ffh          | Power Panic min travel feedrate                   | Power Panic  | D3 Ax0c35 C4
+| 0x0C31 3121 | uint32  | EEPROM_UVLO_MIN_SEGMENT_TIME_US       | ???          | ff ff ff ffh          | Power Panic min segment time us                   | Power Panic  | D3 Ax0c31 C4
+| 0x0C21 3105 | float   | EEPROM_UVLO_MAX_JERK                  | ???          | ff ff ff ffh          | Power Panic max jerk                              | Power Panic  | D3 Ax0c21 C16
+| ^           | ^       | ^                                     | ???          | ^                     | E-axis                                            | ^            | D3 Ax0d2d C4
+| ^           | ^       | ^                                     | ???          | ^                     | Z-axis                                            | ^            | D3 Ax0d29 C4
+| ^           | ^       | ^                                     | ???          | ^                     | Y-axis                                            | ^            | D3 Ax0d25 C4
+| ^           | ^       | ^                                     | ???          | ^                     | X-axis                                            | ^            | D3 Ax0c21 C4
+| 0x0C11 3089 | uint8   | EEPROM_CHECK_FILAMENT                 | 01h 1        | ffh 255               | Check mode for filament is: __warn__              | LCD menu     | D3 Ax0c11 C1
+| ^           | ^       | ^                                     | 02h 2        | ^                     | Check mode for filament is: __strict__            | ^            | ^
+| ^           | ^       | ^                                     | 00h 0        | ^                     | Check mode for filament is: __none__              | ^            | ^
+
 
 |Address begin|Bit/Type | Name                                  | Valid values | Default/FactoryReset  | Description                                       |Gcode/Function| Debug code
 | :--:        | :--:    | :--:                                  | :--:         | :--:                  | :--:                                              | :--:         | :--:
@@ -394,7 +441,7 @@ static_assert(sizeof(Sheets) == EEPROM_SHEETS_SIZEOF, "Sizeof(Sheets) is not EEP
 #define _EEPROM_FREE_NR11_ 4090 // uint16_t
 #define EEPROM_BABYSTEP_Z 4088 //legacy, multiple values stored now in EEPROM_Sheets_base
 #define EEPROM_CALIBRATION_STATUS_V1 4087 // legacy, used up to v3.11
-#define EEPROM_BABYSTEP_Z0 4085
+#define _EEPROM_FREE_NR12_ (EEPROM_CALIBRATION_STATUS_V1 - 2) // uint16_t
 #define EEPROM_FILAMENTUSED 4081
 // uint32_t
 #define EEPROM_TOTALTIME 4077
@@ -608,11 +655,21 @@ static Sheets * const EEPROM_Sheets_base = (Sheets*)(EEPROM_SHEETS_BASE);
 
 #define EEPROM_KILL_MESSAGE (EEPROM_THERMAL_MODEL_VER-2) //PGM_P
 #define EEPROM_KILL_PENDING_FLAG (EEPROM_KILL_MESSAGE-1) //uint8
-
 #define EEPROM_FILENAME_EXTENSION (EEPROM_KILL_PENDING_FLAG - 3) // 3 x char
-
+#define EEPROM_CUSTOM_MENDEL_NAME (EEPROM_FILENAME_EXTENSION-17) //char[17]
+#define EEPROM_UVLO_Z_LIFTED (EEPROM_CUSTOM_MENDEL_NAME-1) //bool
+#define EEPROM_UVLO_EXTRUDE_MINTEMP (EEPROM_UVLO_Z_LIFTED-2) //uint16_t
+#define EEPROM_UVLO_ACCELL_MM_S2_NORMAL (EEPROM_UVLO_EXTRUDE_MINTEMP-4*4) // 4 x float
+#define EEPROM_UVLO_ACCELL_MM_S2_SILENT (EEPROM_UVLO_ACCELL_MM_S2_NORMAL-4*4) // 4 x uint32_t
+#define EEPROM_UVLO_MAX_FEEDRATE_NORMAL (EEPROM_UVLO_ACCELL_MM_S2_SILENT-4*4) // 4 x uint32_t
+#define EEPROM_UVLO_MAX_FEEDRATE_SILENT (EEPROM_UVLO_MAX_FEEDRATE_NORMAL-4*4) // 4 x float
+#define EEPROM_UVLO_MIN_FEEDRATE (EEPROM_UVLO_MAX_FEEDRATE_SILENT-4) //float
+#define EEPROM_UVLO_MIN_TRAVEL_FEEDRATE (EEPROM_UVLO_MIN_FEEDRATE-4) //float
+#define EEPROM_UVLO_MIN_SEGMENT_TIME_US (EEPROM_UVLO_MIN_TRAVEL_FEEDRATE-4) //uint32_t
+#define EEPROM_UVLO_MAX_JERK (EEPROM_UVLO_MIN_SEGMENT_TIME_US-4*4) // 4 x float
+#define EEPROM_CHECK_FILAMENT (EEPROM_UVLO_MAX_JERK-1) // uint8_t
 //This is supposed to point to last item to allow EEPROM overrun check. Please update when adding new items.
-#define EEPROM_LAST_ITEM EEPROM_FILENAME_EXTENSION
+#define EEPROM_LAST_ITEM EEPROM_CHECK_FILAMENT
 // !!!!!
 // !!!!! this is end of EEPROM section ... all updates MUST BE inserted before this mark !!!!!
 // !!!!!
@@ -673,6 +730,30 @@ uint32_t eeprom_init_default_dword(uint32_t *__p, uint32_t def);
 void eeprom_init_default_float(float *__p, float def);
 void eeprom_init_default_block(void *__p, size_t __n, const void *def);
 void eeprom_init_default_block_P(void *__p, size_t __n, const void *def);
+/// Updates eeprom byte and notifies the changed eeprom address (just the address!) onto the serial line
+#ifndef DEBUG_EEPROM_CHANGES
+void eeprom_write_byte_notify(uint8_t *dst, uint8_t value);
+void eeprom_update_byte_notify(uint8_t *dst, uint8_t value);
+void eeprom_write_word_notify(uint16_t *dst, uint16_t value);
+void eeprom_update_word_notify(uint16_t *dst, uint16_t value);
+void eeprom_write_dword_notify(uint32_t *dst, uint32_t value);
+void eeprom_update_dword_notify(uint32_t *dst, uint32_t value);
+void eeprom_write_float_notify(float *dst, float value);
+void eeprom_update_float_notify(float *dst, float value);
+void eeprom_write_block_notify(const void *__src, void *__dst , size_t __size);
+void eeprom_update_block_notify(const void *__src, void *__dst, size_t __size);
+#else
+void eeprom_write_byte_notify(uint8_t *dst, uint8_t value, bool active = true);
+void eeprom_update_byte_notify(uint8_t *dst, uint8_t value, bool active = true);
+void eeprom_write_word_notify(uint16_t *dst, uint16_t value, bool active = true);
+void eeprom_update_word_notify(uint16_t *dst, uint16_t value, bool active = true);
+void eeprom_write_dword_notify(uint32_t *dst, uint32_t value, bool active = true);
+void eeprom_update_dword_notify(uint32_t *dst, uint32_t value, bool active = true);
+void eeprom_write_float_notify(float *dst, float value, bool active = true);
+void eeprom_update_float_notify(float *dst, float value, bool active = true);
+void eeprom_write_block_notify(const void *__src, void *__dst , size_t __size, bool active = true);
+void eeprom_update_block_notify(const void *__src, void *__dst, size_t __size , bool active = true);
+#endif //DEBUG_EEPROM_CHANGES
 #endif
 
 #endif // EEPROM_H
