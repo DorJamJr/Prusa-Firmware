@@ -6260,7 +6260,9 @@ static bool lcd_selfcheck_axis_sg(uint8_t axis) {
 //end of second measurement, now check for possible errors:
 
 	for(uint_least8_t i = 0; i < 2; i++){ //check if measured axis length corresponds to expected length
-		printf_P(_N("Measured axis length:%.3f\n"), measured_axis_length[i]);
+        printf_P(_N("Measured axis length:%.3f\n"), measured_axis_length[i]);
+        printf_P(_N("Expected axis length:%.3f\n"), axis_length);
+        printf_P(_N("Max_error:%.3f\n"), max_error_mm);
 		if (fabs(measured_axis_length[i] - axis_length) > max_error_mm) {
 			enable_endstops(false);
 

@@ -1544,10 +1544,14 @@ void setup()
           // aborted or missing wizard: show a single warning
           lcd_show_fullscreen_message_and_wait_P(_T(MSG_FOLLOW_CALIBRATION_FLOW));
       }
-      else if (!calibration_status_get(CALIBRATION_STATUS_Z)) {
-          // wizard reset after service prep
-          lcd_show_fullscreen_message_and_wait_P(_T(MSG_FOLLOW_Z_CALIBRATION_FLOW));
-      } else {
+// JRA - in the Craig C3, we can't use the xyz cal method due to non-PRUSA heat bed...
+//       so  we adjust the mechanics using a 190mm printed square instead and
+//       bypass the the calibration message
+/*      else if (!calibration_status_get(CALIBRATION_STATUS_Z)) {
+            // wizard reset after service prep
+            lcd_show_fullscreen_message_and_wait_P(_T(MSG_FOLLOW_Z_CALIBRATION_FLOW));
+      } 
+*/      else {
           // warn about other important steps individually
           if (!calibration_status_get(CALIBRATION_STATUS_LIVE_ADJUST))
               lcd_show_fullscreen_message_and_wait_P(_T(MSG_BABYSTEP_Z_NOT_SET));
@@ -3102,6 +3106,7 @@ static void gcode_G81_M420()
 //! @retval false Failed
 bool gcode_M45(bool onlyZ, int8_t verbosity_level)
 {
+//  SERIAL_PROTOCOLPGM("?JRA - At gcode_M45 (#3103).\n");
 	bool final_result = false;
 	#ifdef TMC2130
 	FORCE_HIGH_POWER_START;
@@ -3112,8 +3117,11 @@ bool gcode_M45(bool onlyZ, int8_t verbosity_level)
     // Only Z calibration?
 	if (!onlyZ)
 	{
+//    SERIAL_PROTOCOLPGM("?JRA - setTargetBed(0) (#3116).\n");
 		setTargetBed(0);
+//    SERIAL_PROTOCOLPGM("?JRA - setTargetHotend(#3119).\n");
 		setTargetHotend(0);
+//    SERIAL_PROTOCOLPGM("?JRA - eeprom_adjust_bed_reset() (#3121).\n");
 		eeprom_adjust_bed_reset(); //reset bed level correction
 	}
 
@@ -3151,6 +3159,7 @@ bool gcode_M45(bool onlyZ, int8_t verbosity_level)
 	if (lcd_calibrate_z_end_stop_manual(onlyZ))
 	{
 #endif //TMC2130
+//    SERIAL_PROTOCOLPGM("?JRA - Z at top (#3158).\n");
 		
 		lcd_show_fullscreen_message_and_wait_P(_T(MSG_CONFIRM_NOZZLE_CLEAN));
 		if(onlyZ){
@@ -3162,6 +3171,7 @@ bool gcode_M45(bool onlyZ, int8_t verbosity_level)
 			lcd_puts_at_P(0,3,_n("1/4"));
 		}
 
+//    SERIAL_PROTOCOLPGM("?JRA - Z starting down (#3158).\n");
 		refresh_cmd_timeout();
 		#ifndef STEEL_SHEET
 		if (((degHotend(0) > MAX_HOTEND_TEMP_CALIBRATION) || (degBed() > MAX_BED_TEMP_CALIBRATION)) && (!onlyZ))
@@ -3180,42 +3190,55 @@ bool gcode_M45(bool onlyZ, int8_t verbosity_level)
 			#endif //STEEL_SHEET
 			lcd_show_fullscreen_message_and_wait_P(_T(MSG_PAPER));
 			KEEPALIVE_STATE(IN_HANDLER);
+//      SERIAL_PROTOCOLPGM("?JRA - Below paper message (#3189).\n");
+
 			lcd_display_message_fullscreen_P(_T(MSG_FIND_BED_OFFSET_AND_SKEW_LINE1));
 			lcd_puts_at_P(0,3,_n("1/4"));
 		}
-			
 		bool endstops_enabled  = enable_endstops(false);
     raise_z(-1);
+//    SERIAL_PROTOCOLPGM("?JRA - move print head close to bed (#3199).\n");
 
 		// Move the print head close to the bed.
 		current_position[Z_AXIS] = MESH_HOME_Z_SEARCH;
 
 		enable_endstops(true);
 #ifdef TMC2130
-		tmc2130_home_enter(Z_AXIS_MASK);
+//		SERIAL_PROTOCOLPGM("?JRA - tmc2130_home_enter(Z_AXIS_MASK) (#3204).\n");
+    tmc2130_home_enter(Z_AXIS_MASK);
 #endif //TMC2130
 
 		plan_buffer_line_curposXYZE(homing_feedrate[Z_AXIS] / 40);
 
 		st_synchronize();
 #ifdef TMC2130
+//    SERIAL_PROTOCOLPGM("?JRA - tmc2130_home_exit() (#3212).\n");
 		tmc2130_home_exit();
 #endif //TMC2130
 		enable_endstops(endstops_enabled);
 
+//    SERIAL_PROTOCOLPGM("?JRA - if st_get_position_mm(...) (#3217).\n");
+//    printf_P(PSTR("  ?JRA - Z_AXIS position is: %f \n"), st_get_position_mm(Z_AXIS));
+//    printf_P(PSTR("  ?JRA - MESH_HOME_Z_SEARCH is: %f \n"), MESH_HOME_Z_SEARCH);
+//    printf_P(PSTR("  ?JRA - HOME_Z_SEARCH_THRESHOLD is: %f \n"), HOME_Z_SEARCH_THRESHOLD);
+
 		if ((st_get_position_mm(Z_AXIS) <= (MESH_HOME_Z_SEARCH + HOME_Z_SEARCH_THRESHOLD)) &&
 		    (st_get_position_mm(Z_AXIS) >= (MESH_HOME_Z_SEARCH - HOME_Z_SEARCH_THRESHOLD)))
 		{
+//      SERIAL_PROTOCOLPGM("?JRA - After test of Z_AXIS position (passed?) (#3222).\n");
 			if (onlyZ)
 			{
 				clean_up_after_endstop_move(l_feedmultiply);
 				// Z only calibration.
 				// Load the machine correction matrix
-				world2machine_initialize();
+	      SERIAL_PROTOCOLPGM("?JRA - world2machine_initialize() (#3231).\n");
+  			world2machine_initialize();
 				// and correct the current_position to match the transformed coordinate system.
-				world2machine_update_current();
+	      SERIAL_PROTOCOLPGM("?JRA - world2machine_update_current() (#3234).\n");
+  			world2machine_update_current();
 				//FIXME
-				bool result = sample_mesh_and_store_reference();
+	      SERIAL_PROTOCOLPGM("?JRA - world2machine_initialize() (#3231).\n");
+  			bool result = sample_mesh_and_store_reference();
 				if (result)
 				{
 					calibration_status_set(CALIBRATION_STATUS_Z);
@@ -3224,22 +3247,31 @@ bool gcode_M45(bool onlyZ, int8_t verbosity_level)
 			}
 			else
 			{
+        SERIAL_PROTOCOLPGM("?JRA - Begin bed search (#3246).\n");
 				// Reset the baby step value and the baby step applied flag.
 				calibration_status_clear(CALIBRATION_STATUS_LIVE_ADJUST);
 				eeprom_update_word(reinterpret_cast<uint16_t *>(&(EEPROM_Sheets_base->s[(eeprom_read_byte(&(EEPROM_Sheets_base->active_sheet)))].z_offset)),0);
 
 				// Complete XYZ calibration.
 				uint8_t point_too_far_mask = 0;
+        SERIAL_PROTOCOLPGM("?JRA - Before BedSkewOffsetDetectionResultType result (#3253).\n");
+
+// set verbosity to 20 JRA
+        verbosity_level = 20;
+        
 				BedSkewOffsetDetectionResultType result = find_bed_offset_and_skew(verbosity_level, point_too_far_mask);
 				clean_up_after_endstop_move(l_feedmultiply);
 				// Print head up.
 				current_position[Z_AXIS] = MESH_HOME_Z_SEARCH;
 				plan_buffer_line_curposXYZE(homing_feedrate[Z_AXIS] / 40);
 				st_synchronize();
+        SERIAL_PROTOCOLPGM("?JRA - After st_synchronize() (#3261).\n");
+
 //#ifndef NEW_XYZCAL
 				if (result >= 0)
 				{
-					#ifdef HEATBED_V2
+				  SERIAL_PROTOCOLPGM("?JRA - Result >=0 (#3266).\n");
+        	#ifdef HEATBED_V2
 					sample_z();
 					#else //HEATBED_V2
 					point_too_far_mask = 0;
@@ -5494,7 +5526,7 @@ void process_commands()
     */
     case 45: // M45: Prusa3D: bed skew and offset with manual Z up
     {
-		int8_t verbosity_level = 0;
+		int8_t verbosity_level = 10; // was 0
 		bool only_Z = code_seen('Z');
 		#ifdef SUPPORT_VERBOSITY
 		if (code_seen('V'))
@@ -5502,6 +5534,7 @@ void process_commands()
 			// Just 'V' without a number counts as V1.
 			char c = strchr_pointer[1];
 			verbosity_level = (c == ' ' || c == '\t' || c == 0) ? 1 : code_value_short();
+      verbosity_level = 10;
 		}
 		#endif //SUPPORT_VERBOSITY
 		gcode_M45(only_Z, verbosity_level);
